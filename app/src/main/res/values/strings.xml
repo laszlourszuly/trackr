@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">Trackr</string>
+    <string name="cancel">Cancel</string>
+    <string name="clear">Clear pictures</string>
+    <string name="enable_location_services">You need to enable location services in Settings</string>
+    <string name="go">Go</string>
+    <string name="i_can_explain">I can explain!</string>
+    <string name="latitude">Latitude</string>
+    <string name="longitude">Longitude</string>
+    <string name="ok">OK</string>
+    <string name="picture">Picture</string>
+    <string name="relevant_pictures_will_show_up_here">Related pictures will show up here when you are tracking your route.</string>
+    <string name="the_app_wants_to_track_your_route">
+        "The app wants to track your route in order to collect any relevant pictures from the internet.\n\n"
+        "In the next dialog you can decide whether you want to grant this permission or not. Declining will prevent the app from functioning."
+    </string>
+    <string name="tracking">Tracking your route…</string>
+</resources>
