@@ -40,13 +40,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // The tracking foreground service will pass on the "tracking=on" state
-        // when showing this activity from the status bar notification.
-        // TODO: Fix this state handling. Right now the activity won't be able
-        //       to detect a running service when (re)created from the home
-        //       launcher as a result of user interaction.
-        viewModel.forceTrackingState(intent.getBooleanExtra("tracking", false))
-
         // Observe any permission request trigger-events. These will be sent
         // (through the data binding and view model infrastructures) when the
         // user taps the "Start" button.

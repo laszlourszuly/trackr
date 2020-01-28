@@ -6,13 +6,20 @@ import android.app.NotificationManager.IMPORTANCE_HIGH
 import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.app.Service
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import androidx.preference.PreferenceManager
 import com.echsylon.komoot.R
+import com.echsylon.komoot.isNotTracking
 import com.echsylon.komoot.picture.SearchReceiver
 import com.echsylon.komoot.screens.main.MainActivity
+import com.echsylon.komoot.setNotTracking
+import com.echsylon.komoot.setTracking
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
 import com.google.android.gms.location.LocationServices
@@ -26,21 +33,38 @@ import java.util.concurrent.TimeUnit
 class LocationService : Service() {
 
     companion object {
-        /**
-         * Intent action to use when subscribing to location updates.
-         */
-        const val ACTION_START = "com.echsylon.komoot.locationservice.ACTION_START"
-
-        /**
-         * Intent action to use when unsubscribing from location updates.
-         */
-        const val ACTION_STOP = "com.echsylon.komoot.locationservice.ACTION_STOP"
-
         private const val FOREGROUND_ID = 9341
         private const val NOTIFICATION_ID = 3242
         private const val BROADCAST_ID = 1232
+        private const val ACTION_START = "com.echsylon.komoot.locationservice.ACTION_START"
+        private const val ACTION_STOP = "com.echsylon.komoot.locationservice.ACTION_STOP"
         private const val CHANNEL_NAME = "Komoot Challenge Notification Channel"
         private const val CHANNEL_ID = "com.echsylon.komoot.location.NOTIFICATION_CHANNEL"
+
+        /**
+         * Tries to start this service as a foreground service, unless it's
+         * already started.
+         *
+         * @param context The context to start the service in.
+         */
+        fun startSafely(context: Context) {
+            val preferences = PreferenceManager.getDefaultSharedPreferences(context)
+            if (preferences.isNotTracking()) {
+                val intent = Intent(ACTION_START, Uri.EMPTY, context, LocationService::class.java)
+                ContextCompat.startForegroundService(context, intent)
+            }
+        }
+
+        /**
+         * Ensures a stop action is sent to this service, regardless which
+         * state it is in.
+         *
+         * @param context The context used to send the stop action.
+         */
+        fun stopSafely(context: Context) {
+            val intent = Intent(ACTION_STOP, Uri.EMPTY, context, LocationService::class.java)
+            ContextCompat.startForegroundService(context, intent)
+        }
     }
 
     // This would be Android location client we're subscribing through.
@@ -63,14 +87,18 @@ class LocationService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return when (intent?.action) {
             ACTION_START -> {
-                // TODO: Add recurrent-guard (subsequent START intents)
                 startService()
                 subscribeToLocationUpdates()
+                PreferenceManager.getDefaultSharedPreferences(this).setTracking()
                 START_STICKY
             }
-            else -> {
+            ACTION_STOP -> {
                 unsubscribeFromLocationUpdates()
                 stopService()
+                PreferenceManager.getDefaultSharedPreferences(this).setNotTracking()
+                START_NOT_STICKY
+            }
+            else -> {
                 START_NOT_STICKY
             }
         }
@@ -85,7 +113,7 @@ class LocationService : Service() {
     // Starts this service as a foreground service, making sure a corresponding
     // notification is posted to the status bar.
     private fun startService() {
-        val intent = Intent(applicationContext, MainActivity::class.java).putExtra("tracking", true)
+        val intent = Intent(applicationContext, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(applicationContext, NOTIFICATION_ID, intent, FLAG_UPDATE_CURRENT)
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setContentTitle(getText(R.string.app_name))

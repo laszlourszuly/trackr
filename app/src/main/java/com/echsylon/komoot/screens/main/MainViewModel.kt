@@ -2,17 +2,14 @@ package com.echsylon.komoot.screens.main
 
 import android.app.Application
 import android.content.Context
-import android.content.Intent
-import android.net.Uri.EMPTY
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.preference.PreferenceManager
+import com.echsylon.komoot.isTracking
 import com.echsylon.komoot.location.LocationPermissionHelper
 import com.echsylon.komoot.location.LocationService
-import com.echsylon.komoot.location.LocationService.Companion.ACTION_START
-import com.echsylon.komoot.location.LocationService.Companion.ACTION_STOP
 import com.echsylon.komoot.storage.FlickrDatabase
 import com.echsylon.komoot.storage.Picture
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +26,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _tracking = MutableLiveData<Boolean>()
     private val _grant = MutableLiveData<Unit>()
     private val _enable = MutableLiveData<Unit>()
+
+    init {
+        val preferences = PreferenceManager.getDefaultSharedPreferences(app)
+        val isTracking = preferences.isTracking()
+        _tracking.postValue(isTracking)
+    }
 
     /**
      * Returns a live data object for the cached pictures meta data. The
@@ -107,8 +110,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val context: Context = getApplication()
         if (locationPermissionHelper.hasLocationPermissions(context)) {
             if (locationPermissionHelper.isLocationEnabled(context)) {
-                val intent = Intent(ACTION_START, EMPTY, context, LocationService::class.java)
-                ContextCompat.startForegroundService(context, intent)
+                LocationService.startSafely(context)
                 _tracking.postValue(true)
             } else {
                 _enable.postValue(null)
@@ -123,8 +125,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun stopTracking() {
         val context: Context = getApplication()
-        val intent = Intent(ACTION_STOP, EMPTY, context, LocationService::class.java)
-        ContextCompat.startForegroundService(context, intent)
+        LocationService.stopSafely(context)
         _tracking.postValue(false)
     }
 
