@@ -1,5 +1,7 @@
 package com.echsylon.komoot.screens.main
 
+import android.app.Application
+import android.content.SharedPreferences
 import androidx.lifecycle.Observer
 import com.echsylon.komoot.location.LocationPermissionHelper
 import com.nhaarman.mockitokotlin2.any
@@ -26,7 +28,10 @@ class MainViewModelTestHelper {
             grantObserver: Observer<Unit>? = null,
             enableObserver: Observer<Unit>? = null
         ): MainViewModel {
-            val viewModel = MainViewModel(mock())
+            val mockSharedPreference: SharedPreferences = mock()
+            val mockApplication: Application = mock()
+            whenever(mockApplication.getSharedPreferences(any(), any())).thenReturn(mockSharedPreference)
+            val viewModel = MainViewModel(mockApplication)
             locationPermissionHelper.let { viewModel.setLocationPermissionHelper(it) }
             trackStateObserver?.let { viewModel.tracking.observeForever(it) }
             enableObserver?.let { viewModel.enable.observeForever(it) }

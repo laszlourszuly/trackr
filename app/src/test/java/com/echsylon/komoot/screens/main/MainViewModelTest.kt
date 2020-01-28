@@ -21,54 +21,48 @@ class MainViewModelTest {
     @Test
     fun when_starting_tracking__track_state_is_changed_to_true() {
         val mockHelper = prepareLocationPermissionHelper()
-        val captor = ArgumentCaptor.forClass(Boolean::class.java)
         val mockObserver: Observer<Boolean> = mock()
         val viewModel = prepareViewModel(mockHelper, trackStateObserver = mockObserver)
         viewModel.startTracking()
 
-        verify(mockObserver, times(1)).onChanged(captor.capture())
+        val captor = ArgumentCaptor.forClass(Boolean::class.java)
+        verify(mockObserver, times(2)).onChanged(captor.capture())  // +1 for initial state
         assertThat(captor.value).isEqualTo(true)
     }
 
     @Test
     fun when_stopping_tracking__track_state_is_changed_to_false() {
         val mockHelper = prepareLocationPermissionHelper()
-        val captor = ArgumentCaptor.forClass(Boolean::class.java)
         val mockObserver: Observer<Boolean> = mock()
-        val viewModel = MainViewModel(mock())
-        viewModel.setLocationPermissionHelper(mockHelper)
-        viewModel.tracking.observeForever(mockObserver)
+        val viewModel = prepareViewModel(mockHelper, trackStateObserver = mockObserver)
         viewModel.stopTracking()
 
-        verify(mockObserver, times(1)).onChanged(captor.capture())
+        val captor = ArgumentCaptor.forClass(Boolean::class.java)
+        verify(mockObserver, times(2)).onChanged(captor.capture())  // +1 for initial state
         assertThat(captor.value).isEqualTo(false)
     }
 
     @Test
     fun when_toggling_tracking__track_state_is_changed_to_true_and_then_false() {
         val mockHelper = prepareLocationPermissionHelper()
-        val captor = ArgumentCaptor.forClass(Boolean::class.java)
         val mockObserver: Observer<Boolean> = mock()
-        val viewModel = MainViewModel(mock())
-        viewModel.setLocationPermissionHelper(mockHelper)
-        viewModel.tracking.observeForever(mockObserver)
+        val viewModel = prepareViewModel(mockHelper, trackStateObserver = mockObserver)
         viewModel.toggleTracking()
         viewModel.toggleTracking()
 
-        verify(mockObserver, times(2)).onChanged(captor.capture())
-        assertThat(captor.allValues[0]).isEqualTo(true)
-        assertThat(captor.allValues[1]).isEqualTo(false)
+        val captor = ArgumentCaptor.forClass(Boolean::class.java)
+        verify(mockObserver, times(3)).onChanged(captor.capture())  // +1 for initial state
+        assertThat(captor.allValues[0]).isEqualTo(false)            // initial state
+        assertThat(captor.allValues[1]).isEqualTo(true)
+        assertThat(captor.allValues[2]).isEqualTo(false)
     }
 
     @Test
     fun when_starting_tracking_and_permission_missing__grant_event_is_fired() {
         val mockHelper = prepareLocationPermissionHelper(hasPermission = false)
         val mockObserver: Observer<Unit> = mock()
-        val viewModel = MainViewModel(mock())
-        viewModel.setLocationPermissionHelper(mockHelper)
-        viewModel.grant.observeForever(mockObserver)
+        val viewModel = prepareViewModel(mockHelper, grantObserver = mockObserver)
         viewModel.startTracking()
-
         verify(mockObserver, times(1)).onChanged(null)
     }
 
@@ -76,11 +70,8 @@ class MainViewModelTest {
     fun when_starting_tracking_and_locations_disabled__enable_event_is_fired() {
         val mockHelper = prepareLocationPermissionHelper(isEnabled = false)
         val mockObserver: Observer<Unit> = mock()
-        val viewModel = MainViewModel(mock())
-        viewModel.setLocationPermissionHelper(mockHelper)
-        viewModel.enable.observeForever(mockObserver)
+        val viewModel = prepareViewModel(mockHelper, enableObserver = mockObserver)
         viewModel.startTracking()
-
         verify(mockObserver, times(1)).onChanged(null)
     }
 
@@ -89,12 +80,13 @@ class MainViewModelTest {
         val mockHelper = prepareLocationPermissionHelper(hasPermission = false, isEnabled = false)
         val mockGrantObserver: Observer<Unit> = mock()
         val mockEnableObserver: Observer<Unit> = mock()
-        val viewModel = MainViewModel(mock())
-        viewModel.setLocationPermissionHelper(mockHelper)
-        viewModel.grant.observeForever(mockGrantObserver)
-        viewModel.enable.observeForever(mockEnableObserver)
-        viewModel.startTracking()
+        val viewModel = prepareViewModel(
+            mockHelper,
+            grantObserver = mockGrantObserver,
+            enableObserver = mockEnableObserver
+        )
 
+        viewModel.startTracking()
         verify(mockGrantObserver, times(1)).onChanged(null)
         verify(mockEnableObserver, times(0)).onChanged(null)
     }
