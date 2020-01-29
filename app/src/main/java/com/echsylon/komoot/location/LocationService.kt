@@ -15,11 +15,11 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 import com.echsylon.komoot.R
-import com.echsylon.komoot.isNotTracking
+import com.echsylon.komoot.optNotTracking
+import com.echsylon.komoot.optTracking
 import com.echsylon.komoot.picture.SearchReceiver
 import com.echsylon.komoot.screens.main.MainActivity
 import com.echsylon.komoot.setNotTracking
-import com.echsylon.komoot.setTracking
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
 import com.google.android.gms.location.LocationServices
@@ -49,7 +49,7 @@ class LocationService : Service() {
          */
         fun startSafely(context: Context) {
             val preferences = PreferenceManager.getDefaultSharedPreferences(context)
-            if (preferences.isNotTracking()) {
+            if (preferences.optTracking()) {
                 val intent = Intent(ACTION_START, Uri.EMPTY, context, LocationService::class.java)
                 ContextCompat.startForegroundService(context, intent)
             }
@@ -62,8 +62,11 @@ class LocationService : Service() {
          * @param context The context used to send the stop action.
          */
         fun stopSafely(context: Context) {
-            val intent = Intent(ACTION_STOP, Uri.EMPTY, context, LocationService::class.java)
-            ContextCompat.startForegroundService(context, intent)
+            val preferences = PreferenceManager.getDefaultSharedPreferences(context)
+            if (preferences.optNotTracking()) {
+                val intent = Intent(ACTION_STOP, Uri.EMPTY, context, LocationService::class.java)
+                ContextCompat.startForegroundService(context, intent)
+            }
         }
     }
 
@@ -89,13 +92,11 @@ class LocationService : Service() {
             ACTION_START -> {
                 startService()
                 subscribeToLocationUpdates()
-                PreferenceManager.getDefaultSharedPreferences(this).setTracking()
                 START_STICKY
             }
             ACTION_STOP -> {
                 unsubscribeFromLocationUpdates()
                 stopService()
-                PreferenceManager.getDefaultSharedPreferences(this).setNotTracking()
                 START_NOT_STICKY
             }
             else -> {
@@ -106,6 +107,7 @@ class LocationService : Service() {
 
     override fun onDestroy() {
         // Make sure we reset properly in extraordinary situations as well.
+        PreferenceManager.getDefaultSharedPreferences(this).setNotTracking()
         unsubscribeFromLocationUpdates()
         super.onDestroy()
     }

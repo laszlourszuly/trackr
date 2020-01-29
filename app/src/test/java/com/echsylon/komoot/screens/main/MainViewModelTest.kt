@@ -35,10 +35,11 @@ class MainViewModelTest {
         val mockHelper = prepareLocationPermissionHelper()
         val mockObserver: Observer<Boolean> = mock()
         val viewModel = prepareViewModel(mockHelper, trackStateObserver = mockObserver)
+        viewModel.startTracking()
         viewModel.stopTracking()
 
         val captor = ArgumentCaptor.forClass(Boolean::class.java)
-        verify(mockObserver, times(2)).onChanged(captor.capture())  // +1 for initial state
+        verify(mockObserver, times(3)).onChanged(captor.capture())  // +1 for initial state, +1 for start tracking
         assertThat(captor.value).isEqualTo(false)
     }
 

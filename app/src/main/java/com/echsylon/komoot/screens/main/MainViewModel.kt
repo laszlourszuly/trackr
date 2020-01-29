@@ -2,6 +2,7 @@ package com.echsylon.komoot.screens.main
 
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -23,14 +24,30 @@ import org.jetbrains.annotations.TestOnly
  */
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private var locationPermissionHelper = LocationPermissionHelper()
+    private var startServiceAction: () -> Unit = { LocationService.startSafely(getApplication()) }
+    private var stopServiceAction: () -> Unit = { LocationService.stopSafely(getApplication()) }
+
+    private val preferences = PreferenceManager.getDefaultSharedPreferences(app)
+    private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+        if (key == "tracking") {
+            _tracking.postValue(prefs.isTracking())
+        }
+    }
+
     private val _tracking = MutableLiveData<Boolean>()
     private val _grant = MutableLiveData<Unit>()
     private val _enable = MutableLiveData<Unit>()
 
+
     init {
-        val preferences = PreferenceManager.getDefaultSharedPreferences(app)
+        preferences.registerOnSharedPreferenceChangeListener(preferenceListener)
         val isTracking = preferences.isTracking()
         _tracking.postValue(isTracking)
+    }
+
+    override fun onCleared() {
+        preferences.unregisterOnSharedPreferenceChangeListener(preferenceListener)
+        super.onCleared()
     }
 
     /**
@@ -91,17 +108,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Forces the tracking state to a certain value.
-     *
-     * @param isTracking The new state value to enforce.
-     */
-    // TODO: This state handling isn't sufficient. Refactor to a more robust
-    //       solution.
-    fun forceTrackingState(isTracking: Boolean) {
-        _tracking.postValue(isTracking)
-    }
-
-    /**
      * Starts tracking location updates independently of the current lifecycle
      * owner (typically an Activity). Fires of corresponding events if lacking
      * permissions or the location services are disabled.
@@ -110,8 +116,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val context: Context = getApplication()
         if (locationPermissionHelper.hasLocationPermissions(context)) {
             if (locationPermissionHelper.isLocationEnabled(context)) {
-                LocationService.startSafely(context)
-                _tracking.postValue(true)
+                startServiceAction.invoke()
             } else {
                 _enable.postValue(null)
             }
@@ -124,13 +129,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * Stops tracking location updates.
      */
     fun stopTracking() {
-        val context: Context = getApplication()
-        LocationService.stopSafely(context)
-        _tracking.postValue(false)
+        stopServiceAction.invoke()
+    }
+
+
+    @TestOnly
+    fun setTestLocationPermissionHelper(helper: LocationPermissionHelper) {
+        locationPermissionHelper = helper
     }
 
     @TestOnly
-    fun setLocationPermissionHelper(helper: LocationPermissionHelper) {
-        locationPermissionHelper = helper
+    fun setTestStartServiceAction(action: () -> Unit) {
+        startServiceAction = action
     }
+
+    @TestOnly
+    fun setTestStopServiceAction(action: () -> Unit) {
+        stopServiceAction = action
+    }
+
 }
