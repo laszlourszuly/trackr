@@ -6,20 +6,14 @@ import android.app.NotificationManager.IMPORTANCE_HIGH
 import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.app.Service
-import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
-import androidx.preference.PreferenceManager
 import com.echsylon.komoot.R
-import com.echsylon.komoot.optNotTracking
-import com.echsylon.komoot.optTracking
+import com.echsylon.komoot.TrackrApplication
 import com.echsylon.komoot.picture.SearchReceiver
 import com.echsylon.komoot.screens.main.MainActivity
-import com.echsylon.komoot.setNotTracking
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
 import com.google.android.gms.location.LocationServices
@@ -33,41 +27,14 @@ import java.util.concurrent.TimeUnit
 class LocationService : Service() {
 
     companion object {
+        const val ACTION_START = "com.echsylon.komoot.locationservice.ACTION_START"
+        const val ACTION_STOP = "com.echsylon.komoot.locationservice.ACTION_STOP"
+
         private const val FOREGROUND_ID = 9341
         private const val NOTIFICATION_ID = 3242
         private const val BROADCAST_ID = 1232
-        private const val ACTION_START = "com.echsylon.komoot.locationservice.ACTION_START"
-        private const val ACTION_STOP = "com.echsylon.komoot.locationservice.ACTION_STOP"
         private const val CHANNEL_NAME = "Komoot Challenge Notification Channel"
         private const val CHANNEL_ID = "com.echsylon.komoot.location.NOTIFICATION_CHANNEL"
-
-        /**
-         * Tries to start this service as a foreground service, unless it's
-         * already started.
-         *
-         * @param context The context to start the service in.
-         */
-        fun startSafely(context: Context) {
-            val preferences = PreferenceManager.getDefaultSharedPreferences(context)
-            if (preferences.optTracking()) {
-                val intent = Intent(ACTION_START, Uri.EMPTY, context, LocationService::class.java)
-                ContextCompat.startForegroundService(context, intent)
-            }
-        }
-
-        /**
-         * Ensures a stop action is sent to this service, regardless which
-         * state it is in.
-         *
-         * @param context The context used to send the stop action.
-         */
-        fun stopSafely(context: Context) {
-            val preferences = PreferenceManager.getDefaultSharedPreferences(context)
-            if (preferences.optNotTracking()) {
-                val intent = Intent(ACTION_STOP, Uri.EMPTY, context, LocationService::class.java)
-                ContextCompat.startForegroundService(context, intent)
-            }
-        }
     }
 
     // This would be Android location client we're subscribing through.
@@ -107,7 +74,6 @@ class LocationService : Service() {
 
     override fun onDestroy() {
         // Make sure we reset properly in extraordinary situations as well.
-        PreferenceManager.getDefaultSharedPreferences(this).setNotTracking()
         unsubscribeFromLocationUpdates()
         super.onDestroy()
     }
@@ -142,8 +108,8 @@ class LocationService : Service() {
     // Configures the location updates we want on subscribes accordingly with
     // the Android location client.
     private fun subscribeToLocationUpdates() {
-        val locations = LocationPermissionHelper()
-        if (locations.hasLocationPermissions(this) && locations.isLocationEnabled(this)) {
+        val app: TrackrApplication = application as TrackrApplication
+        if (app.hasLocationPermissions() && app.isLocationEnabled()) {
             val locationRequest = LocationRequest()
             locationRequest.priority = PRIORITY_HIGH_ACCURACY
             locationRequest.interval = TimeUnit.SECONDS.toMillis(20)

@@ -2,53 +2,25 @@ package com.echsylon.komoot.screens.main
 
 import android.app.Application
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import androidx.preference.PreferenceManager
-import com.echsylon.komoot.isTracking
-import com.echsylon.komoot.location.LocationPermissionHelper
-import com.echsylon.komoot.location.LocationService
+import com.echsylon.komoot.TrackrApplication
 import com.echsylon.komoot.storage.FlickrDatabase
 import com.echsylon.komoot.storage.Picture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jetbrains.annotations.TestOnly
 
 /**
  * This class orchestrates the different reactive data sources toggled by user
  * events and other flows (such as database updates etc).
  */
 class MainViewModel(app: Application) : AndroidViewModel(app) {
-    private var locationPermissionHelper = LocationPermissionHelper()
-    private var startServiceAction: () -> Unit = { LocationService.startSafely(getApplication()) }
-    private var stopServiceAction: () -> Unit = { LocationService.stopSafely(getApplication()) }
-
-    private val preferences = PreferenceManager.getDefaultSharedPreferences(app)
-    private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
-        if (key == "tracking") {
-            _tracking.postValue(prefs.isTracking())
-        }
-    }
-
-    private val _tracking = MutableLiveData<Boolean>()
     private val _grant = MutableLiveData<Unit>()
     private val _enable = MutableLiveData<Unit>()
 
-
-    init {
-        preferences.registerOnSharedPreferenceChangeListener(preferenceListener)
-        val isTracking = preferences.isTracking()
-        _tracking.postValue(isTracking)
-    }
-
-    override fun onCleared() {
-        preferences.unregisterOnSharedPreferenceChangeListener(preferenceListener)
-        super.onCleared()
-    }
 
     /**
      * Returns a live data object for the cached pictures meta data. The
@@ -65,7 +37,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * Returns the location tracking state changes.
      */
     val tracking: LiveData<Boolean>
-        get() = _tracking
+        get() {
+            val app: TrackrApplication = getApplication()
+            return app.tracking
+        }
 
     /**
      * Emits an event when a location updates subscription is prevented by
@@ -113,10 +88,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * permissions or the location services are disabled.
      */
     fun startTracking() {
-        val context: Context = getApplication()
-        if (locationPermissionHelper.hasLocationPermissions(context)) {
-            if (locationPermissionHelper.isLocationEnabled(context)) {
-                startServiceAction.invoke()
+        val app: TrackrApplication = getApplication()
+        if (app.hasLocationPermissions()) {
+            if (app.isLocationEnabled()) {
+                app.startLocationService()
             } else {
                 _enable.postValue(null)
             }
@@ -129,23 +104,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * Stops tracking location updates.
      */
     fun stopTracking() {
-        stopServiceAction.invoke()
-    }
-
-
-    @TestOnly
-    fun setTestLocationPermissionHelper(helper: LocationPermissionHelper) {
-        locationPermissionHelper = helper
-    }
-
-    @TestOnly
-    fun setTestStartServiceAction(action: () -> Unit) {
-        startServiceAction = action
-    }
-
-    @TestOnly
-    fun setTestStopServiceAction(action: () -> Unit) {
-        stopServiceAction = action
+        val app: TrackrApplication = getApplication()
+        app.stopLocationService()
     }
 
 }

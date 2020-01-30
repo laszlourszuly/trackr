@@ -20,6 +20,7 @@
 
     <application
         android:allowBackup="true"
+        android:name=".TrackrApplication"
         android:icon="@drawable/ic_burst"
         android:label="@string/app_name"
         android:supportsRtl="true"
