@@ -11,7 +11,7 @@ import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.databinding.DataBindingUtil
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.observe
 import com.echsylon.komoot.R
 import com.echsylon.komoot.databinding.ActivityMainBinding
@@ -34,7 +34,7 @@ class MainActivity : AppCompatActivity() {
 
     // This view model will be passed to the data binding infrastructure in
     // order to map data to the view and act on user interaction.
-    private val viewModel by lazy { ViewModelProviders.of(this)[MainViewModel::class.java] }
+    private val viewModel by lazy { ViewModelProvider(this).get(MainViewModel::class.java) }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
